@@ -57,6 +57,13 @@ with the original graphic/frame offsets. macOS Cocoa rendering was exercised and
 captured successfully. Linux/Windows execution has not been tested; SDL is the
 portable graphics layer, while the current network probe still uses POSIX sockets.
 
+The complete scan of the downloaded `SA2.5-20260823` pack examined 285,143 unique
+graphics and 975 unique sprites (539,374 frames after duplicate IDs are replaced).
+285,061 graphics decoded successfully; **82 records were rejected** for invalid
+dimensions or compressed runs. The scan returned nonzero as intended, without
+sanitizer memory errors. These results apply to `real_15.bin` SHA-256
+`57b47c00d42017538716a5b9da0ea0a284194d95fad47e3c15eac36735ed70d1`.
+
 The downloaded archive contains malformed graphics; the bounded decoder reports
 these instead of trusting dimensions and writing beyond the output buffer.
 The raw-image path also handles the original encoder's pointer-valued `RD.size`
