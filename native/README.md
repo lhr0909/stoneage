@@ -1,6 +1,7 @@
-# Native VER25 port: protocol milestone
+# Native VER25 port: protocol and rendering milestones
 
-**The native protocol target works; the graphical game is not ported yet.**
+**Native protocol integration and an SDL2 asset preview work; the graphical game
+is not playable yet.**
 It compiles `newproto/autil.cpp` directly from this repository's newer client,
 with `_SA_VERSION_25` and `_SA_VERSION_SPECIAL`. It does not use the mobile
 client as its gameplay baseline.
@@ -26,8 +27,49 @@ existing characters. Omitting all arguments runs only local codec tests. The
 network probe is restricted to `127.0.0.1:9065` and has response timeouts.
 
 This is a command-line integration check. It does not open a game window or
-support movement/battle controls. `build/native25/stoneage25-probe` is an ARM64
+support movement/battle controls. The separate asset preview below is offline. `build/native25/stoneage25-probe` is an ARM64
 Mac executable on Apple Silicon; Docker runs only the servers.
+
+## Native SDL2 asset preview
+
+With SDL2 2.0.18+ installed (`brew install sdl2` on macOS):
+
+```sh
+./script/preview_native25.sh /path/to/stoneage2.5
+```
+
+This opens an animated character preview using the actual 2.5 files. Left/right
+select a sprite; up/down select its animation; Space pauses; Escape exits.
+It is a renderer development tool, with no server connection or gameplay UI.
+
+`assets25.cpp` ports the indexed RD decoding from `system/unpack.cpp`, palette
+loading from `system/directdraw.cpp`, and the layouts in `loadrealbin.h` and
+`loadsprbin.h`. It reads explicit little-endian fields, preserving 80-byte graphic
+records, 12-byte sprite indices/animation headers, and 10-byte frames on ARM64.
+It uses `real_15.bin`, `adrn_15.bin`, `spr_4.bin`, `spradrn_5.bin`, and
+`data/pal/Palet_1.sap` from the 2.5 pack. Duplicate graphic and sprite IDs keep the last record,
+as in the original loaders; `0xffffffff` sprite frames have no image. Index zero
+is transparent; SAP BGR entries occupy slots 16–239. No game assets are committed.
+
+The preview uploads RGBA pixels to [SDL2 textures](https://wiki.libsdl.org/SDL2/SDL_CreateTextureFromSurface)
+and draws them using [SDL_RenderCopy](https://wiki.libsdl.org/SDL2/SDL_RenderCopy),
+with the original graphic/frame offsets. macOS Cocoa rendering was exercised and
+captured successfully. Linux/Windows execution has not been tested; SDL is the
+portable graphics layer, while the current network probe still uses POSIX sockets.
+
+The downloaded archive contains malformed graphics; the bounded decoder reports
+these instead of trusting dimensions and writing beyond the output buffer.
+The raw-image path also handles the original encoder's pointer-valued `RD.size`
+field by checking the actual ADRN record length, as required by the original
+decoder. Selecting an affected animation stops the preview with the bitmap ID and error.
+Repair/compatibility handling is still needed before general gameplay. To scan
+all unique graphic records (returns nonzero for rejected records):
+
+```sh
+build/native25/stoneage25-assets-test /path/to/stoneage2.5
+# Automated native rendering smoke check, then exit:
+build/native25/stoneage25-assets /path/to/stoneage2.5 --smoke /tmp/stoneage25.bmp
+```
 
 ## What VER25 actually changes
 
@@ -68,9 +110,9 @@ world, save/logout, and relogin.
 2. Replace Win32 entry/event loop, input/IME, font/audio, file paths, and Winsock
    integration. Build the required Lua functionality from portable source and
    remove the local target's proprietary launcher dependencies.
-3. Port the original graphics/sprite loaders to explicit disk layouts and the
-   downloaded 2.5 asset filenames (`real_15`, `adrn_15`, `spr_4`, `spradrn_5`).
-   VER25 still defaults to newer filenames; the source's custom UI may need
+3. Integrate the new 2.5 asset reader into the original gameplay renderer and
+   resolve malformed records in the downloaded pack. The original VER25 entrypoint
+   still defaults to newer filenames; the source's custom UI may need
    graphics not present in a generic 2.5 pack. Resolve that by checking actual
    referenced IDs, not by renaming asset files.
 4. Adapt and verify gameplay-status fields and feature flags against the older
