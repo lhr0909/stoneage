@@ -629,6 +629,8 @@ int connectServer(void)
 #else
 			lssproto_ClientLogin_send(sockfd, userId,userPassword, mac, selectServerIndex,"192.168.1.1");
 #endif
+#else
+			lssproto_ClientLogin_send(sockfd, userId, userPassword);
 #endif
 			if ((bNewServer & 0xf000000) == 0xf000000)
 			{

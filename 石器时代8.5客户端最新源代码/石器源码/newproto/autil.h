@@ -52,7 +52,7 @@ int util_mkstring(char *buffer, char *value);
 int strcmptail( char *s1 , char *s2 );
 #ifndef _AUTIL_H_
 #define _AUTIL_H_
-#ifdef _FONT_STYLE_
+#if defined(_FONT_STYLE_) && !defined(STONEAGE_PROTOCOL_ONLY)
 typedef struct
 {
 	int x;

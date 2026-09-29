@@ -684,3 +684,7 @@ unsigned int TimeGetTime(void);
 #define	_SUNDAY_STR_SEARCH			//SUNDAY字符串搜索算法  比KMP更牛速度更快的算法
 #endif
 
+
+#ifdef STONEAGE_LOCAL_25
+#include "../../../native/local25_profile.h"
+#endif

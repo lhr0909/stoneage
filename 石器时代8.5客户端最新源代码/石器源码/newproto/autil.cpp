@@ -6,6 +6,11 @@
 // The following definitions is to define game-dependent codes.
 // Before compiling, remove the "//".
 #define __STONEAGE
+#ifdef STONEAGE_PROTOCOL_ONLY
+#include "../../../native/codec_portability.h"
+#include "autil.h"
+void lssproto_Send(int fd, char *message);
+#else
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +22,8 @@
 #include "../systeminc/version.h"
 #include "../systeminc/lssproto_util.h"
 //#include "../systeminc/common.h"
+#endif
+
 #endif
 
 char **MesgSlice;
@@ -40,7 +47,7 @@ void util_Init(void)
 	g_iMallocCount++;
 #endif
   for (i=0; i<SLICE_MAX; i++){
-    MesgSlice[i] = (char *) MALLOC(SLICE_SIZE);
+    MesgSlice[i] = (char *) CALLOC(1, SLICE_SIZE);
 #ifdef _STONDEBUG_
 		g_iMallocCount++;
 #endif
@@ -60,7 +67,7 @@ void util_SplitMessage(char *source, char *separator)
     char *ptr;
     char *head = source;
     
-    while ((ptr = (char *) strstr(head, separator)) && (SliceCount<=SLICE_MAX)) {
+    while ((ptr = (char *) strstr(head, separator)) && (SliceCount<SLICE_MAX)) {
       ptr[0] = '\0';
       if (strlen(head)<SLICE_SIZE) {	// discard slices too large
         strcpy(MesgSlice[SliceCount], head);
@@ -68,7 +75,7 @@ void util_SplitMessage(char *source, char *separator)
       }
       head = ptr+1;
     }
-    strcpy(source,head);	// remove splited slices
+    memmove(source, head, strlen(head) + 1);	// remove splited slices
   }
 }
 
@@ -116,6 +123,7 @@ void util_DecodeMessage(char *dst, char *src)
   char t3[4096], t4[4096];	// This buffer is enough for an integer.
   char tz[65500];
 
+  if (!src || strlen(src) < 6) { dst[0] = 0; return; }
   if( src[strlen(src)-1] == '\n')
 	src[strlen(src)-1] = 0;
   util_xorstring(tz, src);
@@ -135,6 +143,7 @@ void util_DecodeMessage(char *dst, char *src)
   util_swapint(&rn, &t2, "3142");
 #endif
 //  printf("random number=%d\n", rn);
+  if (rn < 0 || rn >= 99) { dst[0] = 0; return; }
   util_shrstring(dst, tz + INTCODESIZE, rn);
   
 }
@@ -154,11 +163,17 @@ int util_GetFunctionFromSlice(int *func, int *fieldcount)
 
 //  if (strcmp(MesgSlice[0], DEFAULTFUNCBEGIN)!=0) util_DiscardMessage();
   
+  if (SliceCount < 3) return 0;
+  if (strlen(MesgSlice[1]) >= sizeof(t1)) return 0;
   strcpy(t1, MesgSlice[1]);
   // Robin adjust
   //*func=atoi(t1);
+#ifdef STONEAGE_LOCAL_25
+  *func=atoi(t1);
+#else
   *func=atoi(t1)-23;
-  for (i=0; i<SLICE_MAX; i++)
+#endif
+  for (i=2; i<SliceCount; i++)
     if (strcmp(MesgSlice[i], DEFAULTFUNCEND)==0) {
       *fieldcount=i-2;	// - "&" - "#" - "func" 3 fields
       return 1;
@@ -234,7 +249,11 @@ VMProtectBegin("util_SendMesg");
 #endif
   char t1[16384], t2[16384];
 
+#ifdef STONEAGE_LOCAL_25
+  sprintf_s(t1, sizeof(t1),"&;%d%s;#;", func, buffer);
+#else
   sprintf_s(t1, sizeof(t1),"(&;%d%s;#;", func+13, buffer);
+#endif
 #ifdef _NEWNET_
   util_EncodeMessageTea(t2, t1);
 #else
@@ -695,7 +714,7 @@ void strncpysafe( char* dest , const size_t n ,
 	const char* src ,const int length )
 {
 	unsigned int Short;
-	Short = min( strlen( src ) ,(unsigned int) length );
+	Short = min( strlen( src ) ,(size_t) length );
 	if( n < Short + 1 ){
 		strncpy2( dest , src , n-1 );
 		dest[n-1]='\0';
@@ -757,7 +776,7 @@ void rtrim(char *str){
 	int i;
 	for(i=(int)strlen(str)-1; str[i] == 32 && i>=0; str[i--]=0);
 } 
-#ifdef _FONT_STYLE_
+#if defined(_FONT_STYLE_) && !defined(STONEAGE_PROTOCOL_ONLY)
 
 WM_STR wmstr[25];
 extern int getTextLength(char * str);
