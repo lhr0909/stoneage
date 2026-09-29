@@ -50,8 +50,9 @@ The client depends on Win32, DirectDraw, DirectSound, DirectInput, WinSock,
 Windows IME and binary import libraries. Its source expects files including
 `data/real_136.bin`, `adrn_136.bin`, `spr_115.bin`, and `spradrn_115.bin`; these
 game assets are not included. VMProtect runtime calls are present, but the
-corresponding DLL is absent. `system/gamemain.cpp` installs a timer whose
-callback checks for a debugger or virtual machine and exits if detected.
+corresponding DLL is absent. With `_NODEBUG_` enabled, `system/gamemain.cpp`
+installs a timer whose callback checks for a debugger or virtual machine and
+exits if detected.
 
 For a Mac experiment, first obtain a complete compatible Windows client with
 its assets and dependencies. [CrossOver](https://www.codeweavers.com/support/docs/crossover-mac/index)
